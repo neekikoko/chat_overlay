@@ -12,4 +12,3 @@ Route::get('', function () {
     return Inertia::render('ChatOverlayBigIcons');
 });
 
-Route::get('api/configuration/oauth-token/{name}', [ConfigurationController::class, 'getToken']);

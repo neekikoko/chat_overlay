@@ -34,8 +34,6 @@ function getToken(name) {
 
 const oauthToken = getToken('twitch_oauth');
 
-const activeViewers = new Map();
-
 // create tmi client
 const client = new tmi.Client({
     options: { debug: true },
@@ -46,7 +44,6 @@ const client = new tmi.Client({
     channels: [CHANNEL],
 });
 
-// establish client connection
 client
     .connect()
     .then(() => {
@@ -55,14 +52,9 @@ client
     })
     .catch(console.error);
 
-client.on('join', (_, username, self) => {
-    if (!self) activeViewers.set(username, Date.now());
-});
+client.on('join', (_, username, self) => {});
 
-// remove chatter from active viewer list if "part" event is received
-client.on('part', (_, username) => {
-    activeViewers.delete(username);
-});
+client.on('part', (_, username) => {});
 
 const commands = [
     { name: lurkCommand, async: false },
@@ -70,11 +62,10 @@ const commands = [
 
 // command handling
 client.on('message', async (channel, tags, message, self) => {
-
     const row = db.prepare(`SELECT icon FROM twitch_users WHERE username = ?`).get(tags.username);
 
     try {
-        await fetch('http://localhost:8000/api/chatbot/chat-message', {
+        await fetch(`${process.env.APP_URL}/api/chatbot/chat-message`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -89,10 +80,8 @@ client.on('message', async (channel, tags, message, self) => {
             }),
         });
     } catch (err) {
-        console.log(err);
+        client.say(channel, err);
     }
-
-    activeViewers.set(tags.username, Date.now());
 
     if (self) return;
 
@@ -109,15 +98,3 @@ client.on('message', async (channel, tags, message, self) => {
         }
     }
 });
-
-// remove inactive viewers from active viewers list
-setInterval(() => {
-    const now = Date.now();
-    const TIMEOUT = 15 * 60 * 1000; // 5 minutes
-
-    for (const [username, lastSeen] of activeViewers.entries()) {
-        if (now - lastSeen > TIMEOUT) {
-            activeViewers.delete(username);
-        }
-    }
-}, 60 * 1000);
