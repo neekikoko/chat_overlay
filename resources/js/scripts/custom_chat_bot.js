@@ -18,24 +18,24 @@ dotenv.config({
     path: path.resolve(__dirname, '../../../.env'),
 });
 
-let CHANNEL = (process.env.VITE_TWITCH_CHANNEL || '').trim();
-
-const BOT_USERNAME = process.env.VITE_TWITCH_CHANNEL;
-
 // Connect to SQLite database
 const dbPath = path.join(__dirname, '../../../database/database.sqlite');
 const db = new Database(dbPath);
 
-function getToken(name) {
+function getSetting(name) {
     const row = db.prepare('SELECT value FROM settings WHERE name = ?').get(name);
     if (!row) {
         console.error(`No token found for ${name}. Please save it in the database first.`);
         process.exit(1);
     }
-    return row.token;
+    return row.value;
 }
 
-const oauthToken = getToken('twitch_oauth');
+let CHANNEL = getSetting('channel_name');
+
+const BOT_USERNAME = CHANNEL;
+
+const oauthToken = getSetting('twitch_oauth');
 
 // create tmi client
 const client = new tmi.Client({
@@ -68,30 +68,44 @@ const commands = [
 
 // command handling
 client.on('message', async (channel, tags, message, self) => {
-    const row = db.prepare(`SELECT icon FROM twitch_users WHERE username = ?`).get(tags.username);
+    // Use fallback for bot messages
+    const username = tags.username || BOT_USERNAME;
 
+    // Check if user exists in DB
+    let user = db.prepare(`SELECT icon FROM twitch_users WHERE username = ?`).get(username);
+
+    // Only insert real Twitch users, not the bot
+    if (!user && username !== BOT_USERNAME) {
+        db.prepare(`INSERT INTO twitch_users (username, icon) VALUES (?, ?)`).run(username, '');
+        user = db.prepare(`SELECT icon FROM twitch_users WHERE username = ?`).get(username);
+        console.log(`Created new user: ${username}`);
+    }
+
+    // Send to overlay API
     try {
         await fetch(`${process.env.APP_URL}/api/chatbot/chat-message`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                username: tags.username,
-                displayName: tags['display-name'],
+                username,
+                displayName: tags['display-name'] || username,
                 color: tags.color,
                 badges: tags.badges,
                 emotes: tags.emotes,
-                icon: row?.icon || '',
+                icon: user?.icon || '',
                 message,
                 timestamp: Date.now(),
             }),
         });
     } catch (err) {
-        client.say(channel, err);
+        client.say(channel, `Error sending message: ${err.message}`);
     }
 
+    // ignore bot messages for commands
     if (self) return;
 
-    for (const { name, async: isAsync } of commands) {
+    // Run commands
+    for (const {name, async: isAsync} of commands) {
         if (isAsync) {
             await name(client, channel, message, tags, db);
         } else {

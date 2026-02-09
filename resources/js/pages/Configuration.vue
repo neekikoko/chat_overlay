@@ -190,10 +190,6 @@ export default {
 
                     client.value.on('message', (chan, tags, message, self) => {
                         if (self) return;
-
-                        if (message.toLowerCase() === '!lurk') {
-                            client.value.say(chan, `Thank you for lurking, ${tags.username}!`);
-                        }
                     });
                 })
                 .catch((err) => {
@@ -255,20 +251,14 @@ export default {
         };
 
         const sendTestMessage = async () => {
-            console.log(client.value, connected.value);
-
             if (!client.value || !connected.value) return;
             try {
-                await client.value.say(channel, 'Test message from chat overlay bot!');
+                await client.value.say(channelName.value, 'Test message from chat overlay bot!');
             } catch (err) {
                 console.error(err);
                 error.value = 'Failed to send message';
             }
         };
-
-        onMounted(() => {
-            checkTokenInUrl();
-        });
 
         return {
             showOauth,

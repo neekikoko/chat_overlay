@@ -16,7 +16,7 @@ export default {
 
             sevenTvEmotes: {},
             ttsChamaSevenTvEmotes: {},
-            enable7tv: true,
+            enable7tv: false,
 
             badgeMap: {},
         };
@@ -45,17 +45,14 @@ export default {
             });
         });
 
-        // if (this.enable7tv) {
-        //     this.loadTtschama7tvEmotes();
-        //     this.load7tvEmotes();
-        // }
-
-        // this.loadBadges();
+        if (this.enable7tv) {
+            this.load7tvEmotes();
+        }
     },
 
     unmounted() {
         if (this.channel) {
-            this.channel.stopListening('.ChatMessageReceived');
+            this.channel.stopListening('.new-chat');
             this.echo.leaveChannel('chat');
         }
     },
@@ -84,58 +81,8 @@ export default {
             this.sevenTvEmotes = emotes;
         },
 
-        async loadTtschama7tvEmotes() {
-            const res = await fetch(`https://7tv.io/v3/users/twitch/${import.meta.env.VITE_TWITCH_TTSCHAMA_BROADCASTER_ID}`);
-            const data = await res.json();
-
-            const emotes = {};
-            for (const emote of data.emote_set.emotes) {
-                emotes[emote.name] = `https://cdn.7tv.app/emote/${emote.id}/4x.webp`;
-            }
-
-            this.ttsChamaSevenTvEmotes = emotes;
-        },
-
-        async loadBadges() {
-            try {
-                const clientId = import.meta.env.VITE_TWITCH_CLIENT_ID_TTSCHAMA;
-                const token = import.meta.env.VITE_TWITCH_TTSCHAMA_TOKEN;
-
-                const headers = {
-                    'Client-ID': clientId,
-                    Authorization: `Bearer ${token}`,
-                };
-
-                const [globalRes, channelRes] = await Promise.all([
-                    fetch('https://api.twitch.tv/helix/chat/badges/global', { headers }),
-                    fetch('https://api.twitch.tv/helix/chat/badges?broadcaster_id=780437831', { headers }),
-                ]);
-
-                const global = await globalRes.json();
-                const channel = await channelRes.json();
-
-                const map = {};
-
-                const process = (list) => {
-                    for (const set of list) {
-                        map[set.set_id] = {};
-                        for (const v of set.versions) {
-                            map[set.set_id][v.id] = v.image_url_2x;
-                        }
-                    }
-                };
-
-                process(global.data);
-                process(channel.data);
-
-                this.badgeMap = map;
-            } catch (e) {
-                console.error('badge load failed', e);
-            }
-        },
-
         renderIcon(msg) {
-            let icon = msg.icon?.trim() || 'default';
+            let icon = msg.icon?.trim() || 'default.png';
 
             let classes;
             let style = `outline-color: ${msg.color}`;
@@ -151,18 +98,6 @@ export default {
 
             // fallback to default if file missing
             return `<img class="${classes}" style="${style}" src="${src}" onerror="this.onerror=null;this.src='/icons/default.png';">`;
-        },
-
-        renderBadges(msg) {
-            if (!msg.badges) return '';
-
-            return Object.entries(msg.badges)
-                .map(([set, version]) => {
-                    const url = this.badgeMap?.[set]?.[version];
-                    if (!url) return '';
-                    return `<img class="pr-[1rem] h-[4.5rem]" src="${url}">`;
-                })
-                .join('');
         },
 
         renderMessage(msg) {

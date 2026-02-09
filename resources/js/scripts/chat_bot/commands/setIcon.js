@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Path to your icons folder
 const ICONS_DIR = path.resolve(__dirname, '../../../../../public/icons');
 
 export function setIconCommand(client, channel, message, tags, db) {
@@ -22,20 +23,25 @@ export function setIconCommand(client, channel, message, tags, db) {
     // 🔽 read available icons from folder
     const files = fs.readdirSync(ICONS_DIR);
 
-    const validIcons = new Set(
+    // Map lowercase name → full filename (with extension)
+    const validIconsMap = new Map(
         files
             .filter(f => /\.(png|jpg|jpeg|webp|gif|svg)$/i.test(f))
-            .map(f => path.parse(f).name.toLowerCase())
+            .map(f => [path.parse(f).name.toLowerCase(), f])
     );
 
-    if (!validIcons.has(iconName.toLowerCase())) {
+    if (!validIconsMap.has(iconName.toLowerCase())) {
         client.say(
             channel,
-            `Invalid icon. Available: ${[...validIcons].slice(0, 10).join(', ')}`
+            `Invalid icon. Available: ${[...validIconsMap.keys()].slice(0, 10).join(', ')}`
         );
         return;
     }
 
+    // Use the full filename (with extension)
+    const iconFile = validIconsMap.get(iconName.toLowerCase());
+
+    // Check if user exists in DB
     const row = db
         .prepare(`SELECT icon FROM twitch_users WHERE username = ?`)
         .get(tags.username);
@@ -44,13 +50,13 @@ export function setIconCommand(client, channel, message, tags, db) {
         db.prepare(`
             INSERT INTO twitch_users (username, icon)
             VALUES (?, ?)
-        `).run(tags.username, iconName);
+        `).run(tags.username, iconFile);
     } else {
         db.prepare(`
             UPDATE twitch_users
             SET icon = ?
             WHERE username = ?
-        `).run(iconName, tags.username);
+        `).run(iconFile, tags.username);
     }
 
     client.say(channel, `${tags.username} set ${iconName} as icon.`);
