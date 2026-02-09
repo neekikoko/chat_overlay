@@ -2,24 +2,40 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OauthToken;
+use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ConfigurationController extends Controller
 {
-    public function getToken(string $name): JsonResponse
+    // Get a single setting
+    public function getSetting(string $name): JsonResponse
     {
-        $token = OauthToken::where('name', $name)->first();
-
-        if (!$token) {
-            return response()->json([
-                'token' => null,
-            ]);
-        }
+        $setting = Setting::where('name', $name)->first();
 
         return response()->json([
-            'token' => $token->token,
+            'value' => $setting ? $setting->value : null,
         ]);
+    }
+
+    // Save or update a setting
+    public function saveSetting(Request $request): JsonResponse
+    {
+        $name = $request->input('name');
+        $value = $request->input('value');
+
+
+
+        if (!$name) {
+            return response()->json(['status' => 'error', 'message' => 'Name is required'], 400);
+        }
+
+        Setting::updateOrCreate(
+            ['name' => $name],
+            ['value' => $value]
+        );
+
+        return response()->json(['status' => 'ok']);
     }
 }

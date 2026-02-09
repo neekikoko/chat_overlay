@@ -27,7 +27,7 @@ const dbPath = path.join(__dirname, '../../../database/database.sqlite');
 const db = new Database(dbPath);
 
 function getToken(name) {
-    const row = db.prepare('SELECT token FROM oauth_tokens WHERE name = ?').get(name);
+    const row = db.prepare('SELECT value FROM settings WHERE name = ?').get(name);
     if (!row) {
         console.error(`No token found for ${name}. Please save it in the database first.`);
         process.exit(1);

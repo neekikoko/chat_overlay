@@ -2,35 +2,59 @@
     <div class="configuration p-5 min-h-screen" style="font-family: 'Space Mono', sans-serif">
         <h1 class="text-2xl mb-4">Configuration</h1>
 
-        <div v-if="!tokenExists">
-            <div class="mb-2">OAuth Token does not exist. Please click the button below.</div>
-            <button
-                @click="startOAuth"
-                class="cursor-pointer"
-            >
-                Fetch OAuth Token
-            </button>
+        <!-- Step 1: Enter Channel Name and Client ID -->
+        <div class="mb-3 flex flex-col">
+            <label>Channel Name</label>
+            <input v-model="channelName" class="border p-2 rounded" />
         </div>
 
-        <div v-else>
-            <div class="mb-2" v-if="connected">Bot connected to channel: {{ channel }}</div>
-            <button class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-6 rounded" @click="sendTestMessage">Send Test Message</button>
-            <div class="mb-2">OAuth Token already stored. <span class="text-red-500">DON'T SHOW TO ANYONE.</span></div>
-            <div>
-                <button class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-6 rounded" @click="showOauth = !showOauth">Show Token</button>
-                <span v-if="showOauth" class="">{{ oauthToken }}</span>
+        <div class="mb-3 flex flex-col">
+            <label>Client ID</label>
+            <input v-model="clientId" class="border p-2 rounded" />
+        </div>
+
+        <button
+            class="cursor-pointer hover:bg-neutral-300 border border-black p-3 rounded mb-6"
+            @click="saveSettings"
+        >
+            Save Settings
+        </button>
+
+        <!-- Confirmation message after saving -->
+<!--        <div v-if="saved" class="text-green-600 mb-4">Settings saved successfully!</div>-->
+
+        <!-- Step 2: Show OAuth / Test message section only if saved -->
+        <div v-if="saved">
+            <div v-if="!tokenExists">
+                <div class="mb-2">OAuth Token does not exist. Please click the button below.</div>
+                <button
+                    @click="startOAuth"
+                    class="cursor-pointer hover:bg-neutral-300 border border-black p-3 rounded"
+                >
+                    Fetch OAuth Token
+                </button>
             </div>
-            <div class="mb-2">If you want to replace the token, click the button below.</div>
-            <button
-                @click="startOAuth"
-                class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-6 rounded"
-            >
-                Fetch New OAuth Token
-            </button>
+
+            <div v-else>
+                <div class="mb-2" v-if="connected">Bot connected to channel: {{ channelName }}</div>
+                <button class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-6 rounded" @click="sendTestMessage">Send Test Message</button>
+                <div class="mb-2">OAuth Token already stored. <span class="text-red-500">DON'T SHOW TO ANYONE.</span></div>
+                <div>
+                    <button class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-6 rounded" @click="showOauth = !showOauth">Show Token</button>
+                    <span v-if="showOauth" class="">{{ oauthToken }}</span>
+                </div>
+                <div class="mb-2">If you want to replace the token, click the button below.</div>
+                <button
+                    @click="startOAuth"
+                    class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-6 rounded"
+                >
+                    Fetch New OAuth Token
+                </button>
+            </div>
         </div>
 
         <div>
-            <p v-if="error">{{ error }}</p>
+            <p v-if="error" class="text-red-500">{{ error }}</p>
         </div>
     </div>
 </template>
@@ -41,57 +65,122 @@ import {onMounted, ref} from 'vue';
 
 export default {
     name: 'Configuration',
-    setup() {
+    setup: function () {
         const oauthToken = ref('');
         const client = ref(null);
         const connected = ref(false);
-        const channel = import.meta.env.VITE_TWITCH_CHANNEL;
+        const channelName = ref('');
         const error = ref('');
         const tokenExists = ref(false);
         const showOauth = ref(false);
+        const saved = ref(false); // track if settings were saved
 
-        const CLIENT_ID = import.meta.env.VITE_TWITCH_CLIENT_ID;
+        const clientId = ref('');
         const VITE_TWITCH_REDIRECT_URL = import.meta.env.VITE_TWITCH_REDIRECT_URL;
         const SCOPES = ['chat:read', 'chat:edit', 'channel:bot'];
 
-        onMounted(() => {
+        onMounted(async () => {
+            await loadSettingFromDb('channel_name');
+            await loadSettingFromDb('client_id');
+            await loadSettingFromDb('twitch_oauth');
+
             checkTokenInUrl();
-            loadTokenFromDb();
+
+            if(channelName.value && clientId.value) {
+                saved.value = true;
+            }
         });
 
-        const loadTokenFromDb = async () => {
+        const saveSettings = async () => {
+            if (!channelName.value || !clientId.value) {
+                error.value = "Please fill Channel Name and Client ID first.";
+                return;
+            }
+
             try {
-                const res = await fetch('/api/configuration/oauth-token/twitch_oauth');
-                const data = await res.json();
+                // Save channel name
+                await fetch('/api/configuration/save-setting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    },
+                    body: JSON.stringify({ name: 'channel_name', value: channelName.value }),
+                });
 
-                if (data.token) {
-                    oauthToken.value = data.token.replace(/^oauth:/, '');
-                    tokenExists.value = true;
+                // Save client ID
+                await fetch('/api/configuration/save-setting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    },
+                    body: JSON.stringify({ name: 'client_id', value: clientId.value }),
+                });
 
-                    initTmiClient(oauthToken.value);
-                }
+                // Show confirmation and enable next steps
+                saved.value = true;
+                error.value = '';
             } catch (err) {
-                console.error('Failed to load token from DB', err);
+                console.error(err);
+                error.value = 'Failed to save settings.';
             }
         };
 
+        const loadSettingFromDb = async (name) => {
+            try {
+                const res = await fetch(`/api/configuration/${name}`);
+                const data = await res.json();
+
+                if (data.value) {
+                    if (name === 'twitch_oauth') {
+                        console.log(data.value);
+                        oauthToken.value = data.value.replace(/^oauth:/, '');
+                        tokenExists.value = true;
+                        initTmiClient(oauthToken.value);
+                    } else if (name === 'channel_name') {
+                        channelName.value = data.value;
+                    } else if (name === 'client_id') {
+                        clientId.value = data.value;
+                    } else {
+                        console.error(`Invalid setting name: ${name}`);
+                    }
+                }
+            } catch (err) {
+                console.error(`Failed to load setting ${name}`, err);
+            }
+        }
+
         // Called when the "Fetch OAuth Token" button is clicked
         const startOAuth = () => {
-            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(
+            if (!channelName.value || !clientId.value) {
+                error.value = "Please enter Channel Name and Client ID first!";
+                return;
+            }
+
+            // Clear any previous errors
+            error.value = "";
+
+            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId.value}&redirect_uri=${encodeURIComponent(
                 VITE_TWITCH_REDIRECT_URL,
             )}&response_type=token&scope=${SCOPES.join('+')}`;
         };
 
         const initTmiClient = (token) => {
+            if (!channelName.value || !clientId.value) {
+                console.error("Cannot initialize TMI client: Channel Name or Client ID missing");
+                return;
+            }
+
             if (client.value) return; // prevent double init
 
             client.value = new tmi.Client({
                 options: { debug: true },
                 identity: {
-                    username: 'ttschama',
+                    username: channelName.value,
                     password: `oauth:${token}`,
                 },
-                channels: [channel],
+                channels: [channelName.value],
             });
 
             client.value
@@ -152,13 +241,13 @@ export default {
 
         const saveTokenToDb = async (token, name) => {
             try {
-                await fetch('/chat-bot/save-token', {
+                await fetch('/api/configuration/save-setting', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                     },
-                    body: JSON.stringify({ token: `oauth:${token}`, name: name }),
+                    body: JSON.stringify({name: name, value: `oauth:${token}`}),
                 });
             } catch (err) {
                 console.error('Failed to save token:', err);
@@ -183,14 +272,17 @@ export default {
 
         return {
             showOauth,
-            loadTokenFromDb,
+            loadSettingFromDb,
             oauthToken,
             tokenExists,
             startOAuth,
             sendTestMessage,
             connected,
-            channel,
+            channelName,
+            clientId,
             error,
+            saved,
+            saveSettings
         };
     },
 };
