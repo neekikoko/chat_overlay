@@ -45,12 +45,12 @@ export default {
             });
         });
 
-        if (this.enable7tv) {
-            this.loadTtschama7tvEmotes();
-            this.load7tvEmotes();
-        }
+        // if (this.enable7tv) {
+        //     this.loadTtschama7tvEmotes();
+        //     this.load7tvEmotes();
+        // }
 
-        this.loadBadges();
+        // this.loadBadges();
     },
 
     unmounted() {

@@ -15,15 +15,24 @@ dotenv.config({
     path: path.resolve(__dirname, '../../../.env'),
 });
 
-let CHANNEL = (process.env.TWITCH_CHANNEL || '').trim();
+let CHANNEL = (process.env.VITE_TWITCH_CHANNEL || '').trim();
 
-const BOT_USERNAME = process.env.TWITCH_BOT_USERNAME;
+const BOT_USERNAME = process.env.VITE_TWITCH_CHANNEL;
 
 // Connect to SQLite database
 const dbPath = path.join(__dirname, '../../../database/database.sqlite');
 const db = new Database(dbPath);
 
-const oauthToken = process.env.TWITCH_OAUTH_TOKEN;
+function getToken(name) {
+    const row = db.prepare('SELECT token FROM oauth_tokens WHERE name = ?').get(name);
+    if (!row) {
+        console.error(`No token found for ${name}. Please save it in the database first.`);
+        process.exit(1);
+    }
+    return row.token;
+}
+
+const oauthToken = getToken('twitch_oauth');
 
 const activeViewers = new Map();
 
@@ -42,7 +51,7 @@ client
     .connect()
     .then(() => {
         console.log(`Bot connected to ${CHANNEL}`);
-        client.say(CHANNEL, `I'm ready` + (CHANNEL !== 'neekiko' ? ` and in ${MODE} mode!` : '!'));
+        client.say(CHANNEL, `I'm ready`);
     })
     .catch(console.error);
 

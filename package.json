@@ -20,6 +20,8 @@
     },
     "dependencies": {
         "@inertiajs/vue3": "^2.3.13",
+        "better-sqlite3": "^12.6.2",
+        "dotenv": "^17.2.4",
         "tmi.js": "^1.8.5",
         "vue": "^3.5.27"
     }
