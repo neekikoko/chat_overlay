@@ -1,9 +1,9 @@
 <template>
-    <div class="chatbot">
-        <h2>Configuration</h2>
+    <div class="configuration p-5 min-h-screen" style="font-family: 'Space Mono', sans-serif">
+        <h1 class="text-2xl mb-4">Configuration</h1>
 
         <div v-if="!tokenExists">
-            <div>OAuth Token already does not exist. Please click the button below.</div>
+            <div class="mb-2">OAuth Token does not exist. Please click the button below.</div>
             <button
                 @click="startOAuth"
                 class="cursor-pointer"
@@ -13,19 +13,20 @@
         </div>
 
         <div v-else>
-            <div>OAuth Token already stored: {{ oauthToken }}</div>
-            <div>If you want to replace it, click the button below.</div>
+            <div class="mb-2" v-if="connected">Bot connected to channel: {{ channel }}</div>
+            <button class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-6 rounded" @click="sendTestMessage">Send Test Message</button>
+            <div class="mb-2">OAuth Token already stored. <span class="text-red-500">DON'T SHOW TO ANYONE.</span></div>
+            <div>
+                <button class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-6 rounded" @click="showOauth = !showOauth">Show Token</button>
+                <span v-if="showOauth" class="">{{ oauthToken }}</span>
+            </div>
+            <div class="mb-2">If you want to replace the token, click the button below.</div>
             <button
                 @click="startOAuth"
-                class="cursor-pointer"
+                class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-6 rounded"
             >
-                Fetch OAuth Token
+                Fetch New OAuth Token
             </button>
-
-            <div>
-                <button class="cursor-pointer" @click="sendTestMessage">Send Test Message</button>
-                <p v-if="connected">Bot connected to channel: {{ channel }}</p>
-            </div>
         </div>
 
         <div>
@@ -47,6 +48,7 @@ export default {
         const channel = import.meta.env.VITE_TWITCH_CHANNEL;
         const error = ref('');
         const tokenExists = ref(false);
+        const showOauth = ref(false);
 
         const CLIENT_ID = import.meta.env.VITE_TWITCH_CLIENT_ID;
         const VITE_TWITCH_REDIRECT_URL = import.meta.env.VITE_TWITCH_REDIRECT_URL;
@@ -180,6 +182,7 @@ export default {
         });
 
         return {
+            showOauth,
             loadTokenFromDb,
             oauthToken,
             tokenExists,

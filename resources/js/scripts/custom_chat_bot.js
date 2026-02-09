@@ -4,7 +4,10 @@ import dotenv from 'dotenv';
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 
-import { lurkCommand } from './chat_bot/commands/lurk.js';
+import { iconCommand } from './chat_bot/commands/icon.js';
+import { iconListCommand } from './chat_bot/commands/iconList.js';
+import { setIconCommand } from './chat_bot/commands/setIcon.js';
+import { removeIconCommand } from './chat_bot/commands/removeIcon.js';
 
 // Resolve __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -57,7 +60,10 @@ client.on('join', (_, username, self) => {});
 client.on('part', (_, username) => {});
 
 const commands = [
-    { name: lurkCommand, async: false },
+    { name: iconCommand, async: false },
+    { name: setIconCommand, async: false },
+    { name: iconListCommand, async: false },
+    { name: removeIconCommand, async: false },
 ];
 
 // command handling
@@ -86,15 +92,10 @@ client.on('message', async (channel, tags, message, self) => {
     if (self) return;
 
     for (const { name, async: isAsync } of commands) {
-        let called;
         if (isAsync) {
-            called = await name(client, channel, message, tags, db);
+            await name(client, channel, message, tags, db);
         } else {
-            called = name(client, channel, message, tags, db);
-        }
-        if (called) {
-            // client.say(channel, 'DEBUG: ' + name + ' was called.');
-            return;
+            name(client, channel, message, tags, db);
         }
     }
 });

@@ -1,1 +1,11 @@
 @import 'tailwindcss';
+
+@font-face {
+    font-family: "Pixelify Sans";
+    src: local("Pixelify Sans"), url("./../fonts/Pixelify_Sans/static/PixelifySans-Regular.ttf") format("truetype")
+}
+
+@font-face {
+    font-family: "Space Mono";
+    src: local("Space Mono"), url("./../fonts/Space_Mono/SpaceMono-Regular.ttf") format("truetype")
+}

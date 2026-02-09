@@ -135,31 +135,22 @@ export default {
         },
 
         renderIcon(msg) {
-            let icon = msg.icon?.trim();
-            if (!icon) icon = 'void';
+            let icon = msg.icon?.trim() || 'default';
 
             let classes;
-            let style;
+            let style = `outline-color: ${msg.color}`;
 
-            if (this.layoutMode === 'default') {
-                classes = 'mr-[2rem] min-h-[7rem] min-w-[7rem] h-[7rem] w-[7rem] rounded-[0.5rem] outline-[0.4rem]';
-                style = `outline-color: ${msg.color}`;
-            } else if (this.layoutMode === 'big-icons') {
+            if (this.layoutMode === 'big-icons') {
                 classes = 'mr-[2rem] min-h-[19.2rem] min-w-[19.2rem] h-[19.2rem] w-[19.2rem] rounded-[0.5rem] outline-[0.4rem]';
-                style = `outline-color: ${msg.color}`;
             } else {
                 classes = 'mr-[2rem] min-h-[7rem] min-w-[7rem] h-[7rem] w-[7rem] rounded-[0.5rem] outline-[0.4rem]';
-                style = `outline-color: ${msg.color}`;
             }
 
-            // 7TV by name
-            if (this.ttsChamaSevenTvEmotes?.[icon]) {
-                return `<img class="${classes}" style="${style}" src="${this.ttsChamaSevenTvEmotes[icon]}">`;
-            } else {
-                return `<img class="${classes}" style="${style}" src="${this.ttsChamaSevenTvEmotes['glitchTime']}">`;
-            }
+            // build local path
+            const src = `/icons/${icon}`;
 
-            return '';
+            // fallback to default if file missing
+            return `<img class="${classes}" style="${style}" src="${src}" onerror="this.onerror=null;this.src='/icons/default.png';">`;
         },
 
         renderBadges(msg) {
