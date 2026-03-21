@@ -50,6 +50,20 @@
                 >
                     Fetch New OAuth Token
                 </button>
+
+                <div class="mb-2">
+                    <button
+                        v-if="!broadcasterId"
+                        @click="fetchBroadcasterId"
+                        class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-6 rounded"
+                    >
+                        Fetch Broadcaster ID
+                    </button>
+
+                    <div v-else>
+                        Broadcaster ID: <span class="text-green-600">{{ broadcasterId }}</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -73,6 +87,8 @@ export default {
         const error = ref('');
         const tokenExists = ref(false);
         const showOauth = ref(false);
+        const broadcasterId = ref(null);
+        const fetchingBroadcasterId = ref(false);
         const saved = ref(false); // track if settings were saved
 
         const clientId = ref('');
@@ -83,6 +99,7 @@ export default {
             await loadSettingFromDb('channel_name');
             await loadSettingFromDb('client_id');
             await loadSettingFromDb('twitch_oauth');
+            await loadSettingFromDb('broadcaster_id');
 
             checkTokenInUrl();
 
@@ -142,6 +159,8 @@ export default {
                         channelName.value = data.value;
                     } else if (name === 'client_id') {
                         clientId.value = data.value;
+                    } else if (name === 'broadcaster_id') {
+                        broadcasterId.value = data.value;
                     } else {
                         console.error(`Invalid setting name: ${name}`);
                     }
@@ -235,6 +254,59 @@ export default {
             }
         };
 
+        const fetchBroadcasterId = async () => {
+            if (!oauthToken.value || !clientId.value || !channelName.value) {
+                error.value = 'Missing OAuth token, Client ID, or Channel Name';
+                return;
+            }
+
+            fetchingBroadcasterId.value = true;
+            error.value = '';
+
+            try {
+                const res = await fetch(
+                    `https://api.twitch.tv/helix/users?login=${channelName.value}`,
+                    {
+                        headers: {
+                            'Client-ID': clientId.value,
+                            'Authorization': `Bearer ${oauthToken.value}`,
+                        },
+                    }
+                );
+
+                if (!res.ok) {
+                    throw new Error(`Twitch API error: ${res.status}`);
+                }
+
+                const data = await res.json();
+
+                if (!data.data || data.data.length === 0) {
+                    throw new Error('User not found');
+                }
+
+                const id = data.data[0].id;
+                broadcasterId.value = id;
+
+                await fetch('/api/configuration/save-setting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    },
+                    body: JSON.stringify({
+                        name: 'broadcaster_id',
+                        value: id,
+                    }),
+                });
+
+            } catch (err) {
+                console.error(err);
+                error.value = err.message || 'Failed to fetch broadcaster ID';
+            } finally {
+                fetchingBroadcasterId.value = false;
+            }
+        };
+
         const saveTokenToDb = async (token, name) => {
             try {
                 await fetch('/api/configuration/save-setting', {
@@ -272,7 +344,10 @@ export default {
             clientId,
             error,
             saved,
-            saveSettings
+            saveSettings,
+            broadcasterId,
+            fetchingBroadcasterId,
+            fetchBroadcasterId
         };
     },
 };
