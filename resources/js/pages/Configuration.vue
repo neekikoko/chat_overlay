@@ -51,11 +51,11 @@
                     Fetch New OAuth Token
                 </button>
 
-                <div class="mb-2">
+                <div class="mb-6">
                     <button
                         v-if="!broadcasterId"
                         @click="fetchBroadcasterId"
-                        class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-6 rounded"
+                        class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-3 rounded"
                     >
                         Fetch Broadcaster ID
                     </button>
@@ -63,6 +63,21 @@
                     <div v-else>
                         Broadcaster ID: <span class="text-green-600">{{ broadcasterId }}</span>
                     </div>
+                </div>
+
+                <div class="mb-2">
+                    <button
+                        @click="generateIconPdf"
+                        class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-2 rounded"
+                    >
+                        Generate PDF With Icon List
+                    </button>
+
+                </div>
+
+                <div class="mb-2 flex flex-col">
+                    <label>Public URL to Icon List Document (e.g. Public Google Drive Link)</label>
+                    <input v-model="iconPdfLink" class="border p-2 rounded" />
                 </div>
             </div>
         </div>
@@ -87,6 +102,7 @@ export default {
         const error = ref('');
         const tokenExists = ref(false);
         const showOauth = ref(false);
+        const iconPdfLink = ref('');
         const broadcasterId = ref(null);
         const fetchingBroadcasterId = ref(false);
         const saved = ref(false); // track if settings were saved
@@ -239,12 +255,6 @@ export default {
                         // Add !lurk command listener
                         client.value.on('message', (chan, tags, message, self) => {
                             if (self) return; // Ignore bot's own messages
-
-                            const msg = message.toLowerCase();
-
-                            if (msg === '!lurk') {
-                                client.value.say(chan, `Thank you for lurking, ${tags.username}!`);
-                            }
                         });
                     })
                     .catch((err) => {
@@ -322,6 +332,28 @@ export default {
             }
         };
 
+        const generateIconPdf = async () => {
+            try {
+                const res = await fetch('/api/icons/generate-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    }
+                });
+
+                const data = await res.json();
+
+                if (data.url) {
+
+                } else {
+                    error.value = 'Failed to generate PDF';
+                }
+            } catch (err) {
+                console.error(err);
+                error.value = 'Error generating PDF';
+            }
+        };
+
         const sendTestMessage = async () => {
             if (!client.value || !connected.value) return;
             try {
@@ -347,7 +379,9 @@ export default {
             saveSettings,
             broadcasterId,
             fetchingBroadcasterId,
-            fetchBroadcasterId
+            fetchBroadcasterId,
+            iconPdfLink,
+            generateIconPdf,
         };
     },
 };
