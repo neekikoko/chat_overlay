@@ -77,7 +77,19 @@
 
                 <div class="mb-2 flex flex-col">
                     <label>Public URL to Icon List Document (e.g. Public Google Drive Link)</label>
-                    <input v-model="iconPdfLink" class="border p-2 rounded" />
+                    <div class="flex items-center">
+                        <input v-model="iconPdfLink" class="border p-3 rounded max-w-[400px]" />
+                        <button
+                            class="cursor-pointer hover:bg-neutral-300 border border-black p-3 rounded ml-1"
+                            @click="saveIconPdfLink"
+                        >
+                            Save
+                        </button>
+
+                        <div v-if="savedIconLink" class="text-green-600 ml-2">
+                            saved!
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -105,7 +117,8 @@ export default {
         const iconPdfLink = ref('');
         const broadcasterId = ref(null);
         const fetchingBroadcasterId = ref(false);
-        const saved = ref(false); // track if settings were saved
+        const savedIconLink = ref(false);
+        const saved = ref(false);
 
         const clientId = ref('');
         const VITE_TWITCH_REDIRECT_URL = import.meta.env.VITE_TWITCH_REDIRECT_URL;
@@ -116,6 +129,7 @@ export default {
             await loadSettingFromDb('client_id');
             await loadSettingFromDb('twitch_oauth');
             await loadSettingFromDb('broadcaster_id');
+            await loadSettingFromDb('icon_pdf_link');
 
             checkTokenInUrl();
 
@@ -160,6 +174,33 @@ export default {
             }
         };
 
+        const saveIconPdfLink = async () => {
+            try {
+                await fetch('/api/configuration/save-setting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    },
+                    body: JSON.stringify({
+                        name: 'icon_pdf_link',
+                        value: iconPdfLink.value
+                    }),
+                });
+
+                savedIconLink.value = true;
+
+                setTimeout(() => {
+                    savedIconLink.value = false;
+                }, 2000);
+
+                error.value = '';
+            } catch (err) {
+                console.error(err);
+                error.value = 'Failed to save icon PDF link';
+            }
+        };
+
         const loadSettingFromDb = async (name) => {
             try {
                 const res = await fetch(`/api/configuration/${name}`);
@@ -177,6 +218,8 @@ export default {
                         clientId.value = data.value;
                     } else if (name === 'broadcaster_id') {
                         broadcasterId.value = data.value;
+                    } else if (name === 'icon_pdf_link') {
+                        iconPdfLink.value = data.value;
                     } else {
                         console.error(`Invalid setting name: ${name}`);
                     }
@@ -382,6 +425,8 @@ export default {
             fetchBroadcasterId,
             iconPdfLink,
             generateIconPdf,
+            saveIconPdfLink,
+            savedIconLink
         };
     },
 };
