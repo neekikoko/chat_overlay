@@ -15,7 +15,7 @@ class ConfigurationController extends Controller
         $setting = Setting::where('name', $name)->first();
 
         return response()->json([
-            'value' => $setting ? $setting->value : null,
+            'value' => $setting ? $setting->value : '',
         ]);
     }
 
@@ -33,7 +33,7 @@ class ConfigurationController extends Controller
 
         Setting::updateOrCreate(
             ['name' => $name],
-            ['value' => $value]
+            ['value' => $value ? $value : '']
         );
 
         return response()->json(['status' => 'ok']);

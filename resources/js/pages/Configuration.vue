@@ -50,6 +50,47 @@
                 >
                     Fetch New OAuth Token
                 </button>
+
+                <div class="mb-6">
+                    <button
+                        v-if="!broadcasterId"
+                        @click="fetchBroadcasterId"
+                        class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-3 rounded"
+                    >
+                        Fetch Broadcaster ID
+                    </button>
+
+                    <div v-else>
+                        Broadcaster ID: <span class="text-green-600">{{ broadcasterId }}</span>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <button
+                        @click="generateIconPdf"
+                        class="cursor-pointer hover:bg-neutral-300 border border-black p-3 mb-2 rounded"
+                    >
+                        Generate PDF With Icon List
+                    </button>
+
+                </div>
+
+                <div class="mb-2 flex flex-col">
+                    <label>Public URL to Icon List Document (e.g. Public Google Drive Link)</label>
+                    <div class="flex items-center">
+                        <input v-model="iconPdfLink" class="border p-3 rounded max-w-[400px]" />
+                        <button
+                            class="cursor-pointer hover:bg-neutral-300 border border-black p-3 rounded ml-1"
+                            @click="saveIconPdfLink"
+                        >
+                            Save
+                        </button>
+
+                        <div v-if="savedIconLink" class="text-green-600 ml-2">
+                            saved!
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -73,7 +114,11 @@ export default {
         const error = ref('');
         const tokenExists = ref(false);
         const showOauth = ref(false);
-        const saved = ref(false); // track if settings were saved
+        const iconPdfLink = ref('');
+        const broadcasterId = ref(null);
+        const fetchingBroadcasterId = ref(false);
+        const savedIconLink = ref(false);
+        const saved = ref(false);
 
         const clientId = ref('');
         const VITE_TWITCH_REDIRECT_URL = import.meta.env.VITE_TWITCH_REDIRECT_URL;
@@ -83,6 +128,8 @@ export default {
             await loadSettingFromDb('channel_name');
             await loadSettingFromDb('client_id');
             await loadSettingFromDb('twitch_oauth');
+            await loadSettingFromDb('broadcaster_id');
+            await loadSettingFromDb('icon_pdf_link');
 
             checkTokenInUrl();
 
@@ -127,6 +174,33 @@ export default {
             }
         };
 
+        const saveIconPdfLink = async () => {
+            try {
+                await fetch('/api/configuration/save-setting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    },
+                    body: JSON.stringify({
+                        name: 'icon_pdf_link',
+                        value: iconPdfLink.value
+                    }),
+                });
+
+                savedIconLink.value = true;
+
+                setTimeout(() => {
+                    savedIconLink.value = false;
+                }, 2000);
+
+                error.value = '';
+            } catch (err) {
+                console.error(err);
+                error.value = 'Failed to save icon PDF link';
+            }
+        };
+
         const loadSettingFromDb = async (name) => {
             try {
                 const res = await fetch(`/api/configuration/${name}`);
@@ -142,6 +216,10 @@ export default {
                         channelName.value = data.value;
                     } else if (name === 'client_id') {
                         clientId.value = data.value;
+                    } else if (name === 'broadcaster_id') {
+                        broadcasterId.value = data.value;
+                    } else if (name === 'icon_pdf_link') {
+                        iconPdfLink.value = data.value;
                     } else {
                         console.error(`Invalid setting name: ${name}`);
                     }
@@ -220,18 +298,65 @@ export default {
                         // Add !lurk command listener
                         client.value.on('message', (chan, tags, message, self) => {
                             if (self) return; // Ignore bot's own messages
-
-                            const msg = message.toLowerCase();
-
-                            if (msg === '!lurk') {
-                                client.value.say(chan, `Thank you for lurking, ${tags.username}!`);
-                            }
                         });
                     })
                     .catch((err) => {
                         console.error(err);
                         error.value = 'Failed to connect bot';
                     });
+            }
+        };
+
+        const fetchBroadcasterId = async () => {
+            if (!oauthToken.value || !clientId.value || !channelName.value) {
+                error.value = 'Missing OAuth token, Client ID, or Channel Name';
+                return;
+            }
+
+            fetchingBroadcasterId.value = true;
+            error.value = '';
+
+            try {
+                const res = await fetch(
+                    `https://api.twitch.tv/helix/users?login=${channelName.value}`,
+                    {
+                        headers: {
+                            'Client-ID': clientId.value,
+                            'Authorization': `Bearer ${oauthToken.value}`,
+                        },
+                    }
+                );
+
+                if (!res.ok) {
+                    throw new Error(`Twitch API error: ${res.status}`);
+                }
+
+                const data = await res.json();
+
+                if (!data.data || data.data.length === 0) {
+                    throw new Error('User not found');
+                }
+
+                const id = data.data[0].id;
+                broadcasterId.value = id;
+
+                await fetch('/api/configuration/save-setting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    },
+                    body: JSON.stringify({
+                        name: 'broadcaster_id',
+                        value: id,
+                    }),
+                });
+
+            } catch (err) {
+                console.error(err);
+                error.value = err.message || 'Failed to fetch broadcaster ID';
+            } finally {
+                fetchingBroadcasterId.value = false;
             }
         };
 
@@ -247,6 +372,28 @@ export default {
                 });
             } catch (err) {
                 console.error('Failed to save token:', err);
+            }
+        };
+
+        const generateIconPdf = async () => {
+            try {
+                const res = await fetch('/api/icons/generate-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    }
+                });
+
+                const data = await res.json();
+
+                if (data.url) {
+
+                } else {
+                    error.value = 'Failed to generate PDF';
+                }
+            } catch (err) {
+                console.error(err);
+                error.value = 'Error generating PDF';
             }
         };
 
@@ -272,7 +419,14 @@ export default {
             clientId,
             error,
             saved,
-            saveSettings
+            saveSettings,
+            broadcasterId,
+            fetchingBroadcasterId,
+            fetchBroadcasterId,
+            iconPdfLink,
+            generateIconPdf,
+            saveIconPdfLink,
+            savedIconLink
         };
     },
 };

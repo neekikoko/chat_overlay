@@ -5,7 +5,6 @@ import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 
 import { iconCommand } from './chat_bot/commands/icon.js';
-import { iconListCommand } from './chat_bot/commands/iconList.js';
 import { setIconCommand } from './chat_bot/commands/setIcon.js';
 import { removeIconCommand } from './chat_bot/commands/removeIcon.js';
 
@@ -62,7 +61,6 @@ client.on('part', (_, username) => {});
 const commands = [
     { name: iconCommand, async: false },
     { name: setIconCommand, async: false },
-    { name: iconListCommand, async: false },
     { name: removeIconCommand, async: false },
 ];
 

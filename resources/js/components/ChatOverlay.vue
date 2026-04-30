@@ -15,14 +15,15 @@ export default {
             channel: null,
 
             sevenTvEmotes: {},
-            ttsChamaSevenTvEmotes: {},
-            enable7tv: false,
+            enable7tv: true,
 
             badgeMap: {},
+
+            broadcasterId: null,
         };
     },
 
-    mounted() {
+    async mounted() {
         this.echo = new Echo({
             broadcaster: 'reverb',
             key: import.meta.env.VITE_REVERB_APP_KEY,
@@ -46,7 +47,7 @@ export default {
         });
 
         if (this.enable7tv) {
-            this.load7tvEmotes();
+            await this.loadBroadcasterId();
         }
     },
 
@@ -69,8 +70,28 @@ export default {
             el.scrollTop = el.scrollHeight;
         },
 
+        async loadBroadcasterId() {
+            try {
+                const res = await fetch('/api/configuration/broadcaster_id');
+                const data = await res.json();
+
+                if (!data.value) {
+                    console.warn('No broadcaster ID found in DB');
+                    return;
+                }
+
+                this.broadcasterId = data.value;
+
+                if (this.enable7tv && this.broadcasterId) {
+                    await this.load7tvEmotes();
+                }
+            } catch (err) {
+                console.error('Failed to load broadcaster ID:', err);
+            }
+        },
+
         async load7tvEmotes() {
-            const res = await fetch(`https://7tv.io/v3/users/twitch/${import.meta.env.VITE_TWITCH_BROADCASTER_ID}`);
+            const res = await fetch(`https://7tv.io/v3/users/twitch/${this.broadcasterId}`);
             const data = await res.json();
 
             const emotes = {};
@@ -183,7 +204,7 @@ export default {
 </script>
 
 <template>
-    <div v-if="layoutMode === 'default'" class="flex min-h-screen flex-col justify-end text-white bg-black">
+    <div v-if="layoutMode === 'default'" class="flex min-h-screen flex-col justify-end text-white">
         <div ref="chatContainer" class="d-inline max-h-screen overflow-hidden p-[1.5rem]" style="font-family: 'Space Mono', sans-serif">
             <div v-for="(msg, i) in messages" :key="i" class="mt-[3.5rem]">
                 <div class="flex items-center text-[4.5rem]" :style="{ color: msg.color || '#aaa' }">
@@ -199,7 +220,7 @@ export default {
         </div>
     </div>
 
-    <div v-if="layoutMode === 'big-icons'" class="flex min-h-screen flex-col justify-end text-white bg-black">
+    <div v-if="layoutMode === 'big-icons'" class="flex min-h-screen flex-col justify-end text-white">
         <div ref="chatContainer" class="d-inline max-h-screen overflow-hidden p-[1.5rem]" style="font-family: 'Space Mono', sans-serif">
             <div v-for="(msg, i) in messages" :key="i" class="clearfix mt-[3.5rem]">
                 <div class="float-left" v-html="renderIcon(msg)"></div>

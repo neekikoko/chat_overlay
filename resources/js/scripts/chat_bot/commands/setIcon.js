@@ -20,6 +20,12 @@ export function setIconCommand(client, channel, message, tags, db) {
         return;
     }
 
+    const icon_pdf_link_row = db
+        .prepare(`SELECT value FROM settings WHERE name = ?`)
+        .get('icon_pdf_link');
+
+    const icon_pdf_link = icon_pdf_link_row?.value;
+
     // 🔽 read available icons from folder
     const files = fs.readdirSync(ICONS_DIR);
 
@@ -33,7 +39,7 @@ export function setIconCommand(client, channel, message, tags, db) {
     if (!validIconsMap.has(iconName.toLowerCase())) {
         client.say(
             channel,
-            `Invalid icon. Available: ${[...validIconsMap.keys()].slice(0, 10).join(', ')}`
+            icon_pdf_link ? `Invalid icon. Chose an icon from here: ${icon_pdf_link}` : 'Invalid icon.'
         );
         return;
     }
