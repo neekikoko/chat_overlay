@@ -106,11 +106,26 @@ export default {
             let icon = msg.icon?.trim() || 'default.png';
 
             let classes;
-            let style = `outline-color: ${msg.color}`;
+            let style;
 
             if (this.layoutMode === 'big-icons') {
+                style = `outline-color: ${msg.color}`;
                 classes = 'mr-[2rem] min-h-[19.2rem] min-w-[19.2rem] h-[19.2rem] w-[19.2rem] rounded-[0.5rem] outline-[0.4rem]';
+            } else if (this.layoutMode === 'agumii') {
+                style = `
+                    border: 0.4rem solid transparent;
+                    border-radius: 0.5rem;
+                    border-image: linear-gradient(
+                        to bottom,
+                        ${msg.color} 0%,
+                        ${msg.color} 25%,
+                        #ffffff 90%,
+                        #ffffff 100%
+                    ) 1;
+                `;
+                classes = 'min-h-[19.2rem] min-w-[19.2rem] h-[19.2rem] w-[19.2rem]';
             } else {
+                style = `outline-color: ${msg.color}`;
                 classes = 'mr-[2rem] min-h-[7rem] min-w-[7rem] h-[7rem] w-[7rem] rounded-[0.5rem] outline-[0.4rem]';
             }
 
@@ -119,6 +134,33 @@ export default {
 
             // fallback to default if file missing
             return `<img class="${classes}" style="${style}" src="${src}" onerror="this.onerror=null;this.src='/icons/default.png';">`;
+        },
+
+        renderDisplayName(msg) {
+            const displayName = msg.displayName;
+            const color = msg.color;
+
+            return `<span
+                    style="background: linear-gradient(to bottom, ${color} 0%,  ${color} 25%, #ffffff 90%, #ffffff 100%);
+                    display: inline-block;
+                    line-height: 1;
+                    -webkit-background-clip: text;
+                    background-clip: text;
+                    color: transparent;
+                    /*-webkit-text-stroke: 2px black;*/
+
+                    -webkit-font-smoothing:none;
+                    font-smooth:never;
+                    text-rendering:optimizeSpeed;
+
+                    font-family: 'Bookman Old Style', sans-serif;
+                    transform-origin: left;
+                    transform: scaleX(1);
+                    font-style: italic;
+
+                    ">
+                        ${displayName}:
+                    </span>`;
         },
 
         renderMessage(msg) {
@@ -141,8 +183,8 @@ export default {
                                     ? 'pt-[1rem] h-[13rem]'
                                     : 'my-[-3rem] h-[7rem]'
                                 : emoteOnly
-                                  ? 'pt-[1rem] h-[20rem]'
-                                  : 'my-[-3rem] h-[7rem]';
+                                    ? 'pt-[1rem] h-[13.8rem]'
+                                    : 'my-[-3rem] h-[5rem]';
 
                         replacements.push({
                             start,
@@ -187,8 +229,8 @@ export default {
                                         ? 'pt-[1rem] h-[13rem]'
                                         : 'my-[-3rem] h-[7rem]'
                                     : emoteOnly
-                                      ? 'pt-[1rem] h-[20rem]'
-                                      : 'my-[-3rem] h-[7rem]';
+                                      ? 'pt-[1rem] h-[13.8rem]'
+                                      : 'my-[-3rem] h-[5rem]';
 
                             return `<img class="inline-block ${classes}" src="${this.sevenTvEmotes[clean]}">`;
                         }
@@ -238,6 +280,25 @@ export default {
             </div>
         </div>
     </div>
+
+    <div v-if="layoutMode === 'agumii'" class="flex min-h-screen flex-col justify-end text-white">
+        <div ref="chatContainer" class="d-inline max-h-screen overflow-hidden p-[1.5rem]">
+            <div v-for="(msg, i) in messages" :key="i" class="mt-[1.5rem] agumii-root p-[0.5rem]">
+                <div class="clearfix">
+                    <div class="float-left mr-[2rem] p-[0.5rem] agumii-root" v-html="renderIcon(msg)"></div>
+
+                    <div>
+                        <div class="text-[3.8rem]" :style="{ color: msg.color || '#aaa' }">
+                            <div class="" v-html="renderDisplayName(msg)"></div>
+                        </div>
+
+                        <div style="word-break: break-word; font-family: 'Tahoma', sans-serif" class=" pl-[0.5rem] text-[3.2rem] leading-20" v-html="renderMessage(msg)"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
 </template>
 
 <style scoped>
@@ -245,5 +306,42 @@ export default {
     content: '';
     display: table;
     clear: both;
+}
+
+.agumii-root {
+    position: relative;
+    overflow: hidden; /* VERY IMPORTANT */
+}
+
+/* THE CRUST LAYER */
+.agumii-root::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    z-index: 9999;
+
+    /* multiple layers stacked */
+    background:
+        /* film grain */
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.25'/%3E%3C/svg%3E"),
+
+            /* subtle scanlines */
+        repeating-linear-gradient(
+            to bottom,
+            rgba(255,255,255,0.03) 0px,
+            rgba(0,0,0,0.08) 10px,
+            rgba(0,0,0,0.15) 15px
+        ),
+
+            /* vignette */
+        radial-gradient(
+            ellipse at center,
+            rgba(0,0,0,0) 40%,
+            rgba(0,0,0,0.4) 100%
+        );
+
+    mix-blend-mode: overlay;
+    opacity: 1;
 }
 </style>

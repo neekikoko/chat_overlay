@@ -13,4 +13,8 @@ Route::get('', function () {
     return Inertia::render('ChatOverlayBigIcons');
 });
 
+Route::get('/agumii', function () {
+    return Inertia::render('ChatOverlayAgumii');
+});
+
 Route::get('/icons/preview', [IconController::class, 'preview']);
