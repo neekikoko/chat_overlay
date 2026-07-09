@@ -104,12 +104,13 @@ export default {
 
         renderIcon(msg) {
             let icon = msg.icon?.trim() || 'default.png';
+            let messageColor = msg.color ? msg.color : '#ffffff'
 
             let classes;
             let style;
 
             if (this.layoutMode === 'big-icons') {
-                style = `outline-color: ${msg.color}`;
+                style = `outline-color: ${messageColor}`;
                 classes = 'mr-[2rem] min-h-[19.2rem] min-w-[19.2rem] h-[19.2rem] w-[19.2rem] rounded-[0.5rem] outline-[0.4rem]';
             } else if (this.layoutMode === 'agumii') {
                 style = `
@@ -117,15 +118,15 @@ export default {
                     border-radius: 0.5rem;
                     border-image: linear-gradient(
                         to bottom,
-                        ${msg.color} 0%,
-                        ${msg.color} 25%,
+                        ${messageColor} 0%,
+                        ${messageColor} 25%,
                         #ffffff 90%,
                         #ffffff 100%
                     ) 1;
                 `;
                 classes = 'min-h-[19.2rem] min-w-[19.2rem] h-[19.2rem] w-[19.2rem]';
             } else {
-                style = `outline-color: ${msg.color}`;
+                style = `outline-color: ${messageColor}`;
                 classes = 'mr-[2rem] min-h-[7rem] min-w-[7rem] h-[7rem] w-[7rem] rounded-[0.5rem] outline-[0.4rem]';
             }
 
@@ -138,7 +139,7 @@ export default {
 
         renderDisplayName(msg) {
             const displayName = msg.displayName;
-            const color = msg.color;
+            const color = msg.color ? msg.color : '#ffffff';
 
             return `<span
                     style="background: linear-gradient(to bottom, ${color} 0%,  ${color} 25%, #ffffff 90%, #ffffff 100%);
