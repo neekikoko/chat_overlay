@@ -184,8 +184,8 @@ export default {
                                     ? 'pt-[1rem] h-[13rem]'
                                     : 'my-[-3rem] h-[7rem]'
                                 : emoteOnly
-                                    ? 'pt-[1rem] h-[13.8rem]'
-                                    : 'my-[-3rem] h-[5rem]';
+                                    ? 'pt-[1rem] h-[12.4rem]'
+                                    : 'my-[-3rem] h-[5.5rem]';
 
                         replacements.push({
                             start,
@@ -230,8 +230,8 @@ export default {
                                         ? 'pt-[1rem] h-[13rem]'
                                         : 'my-[-3rem] h-[7rem]'
                                     : emoteOnly
-                                      ? 'pt-[1rem] h-[13.8rem]'
-                                      : 'my-[-3rem] h-[5rem]';
+                                      ? 'pt-[1rem] h-[12.4rem]'
+                                      : 'my-[-3rem] h-[5.5rem]';
 
                             return `<img class="inline-block ${classes}" src="${this.sevenTvEmotes[clean]}">`;
                         }
@@ -289,11 +289,11 @@ export default {
                     <div class="float-left mr-[2rem] p-[0.5rem] agumii-root" v-html="renderIcon(msg)"></div>
 
                     <div>
-                        <div class="text-[3.8rem]" :style="{ color: msg.color || '#aaa' }">
+                        <div class="text-[5.2rem] leading-27" :style="{ color: msg.color || '#aaa' }">
                             <div class="" v-html="renderDisplayName(msg)"></div>
                         </div>
 
-                        <div style="word-break: break-word; font-family: 'Tahoma', sans-serif" class=" pl-[0.5rem] text-[3.2rem] leading-20" v-html="renderMessage(msg)"></div>
+                        <div style="word-break: break-word; font-family: 'Tahoma', sans-serif" class=" pl-[0.5rem] text-[4.5rem] leading-27" v-html="renderMessage(msg)"></div>
                     </div>
                 </div>
 
